@@ -11,8 +11,18 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func main() {
+type Model struct {
+	Db *sql.DB
+}
 
+func main() {
+	model := connect()
+	id := 1
+	user := model.FindOne(id)
+	fmt.Println(user)
+}
+
+func connect() *Model {
 	//通过Socket来连接Mysql
 	//但是应该存在Bug，如果密码里同时存在 ':' '@' '/' 可能会发生错误
 	//开始连接报错如下：
@@ -22,27 +32,49 @@ func main() {
 	//主要是允许Mysql通过Socket连接
 
 	//TODO: 测试PHP里是否允许这样的连接
+	fmt.Println("Starting...")
 	db, err := sql.Open("mysql", "root:000111@tcp(localhost:3306)/golangtest")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	id := 1
+	//TODO: new的用法
+	//两种方案是否都可以,是否一致
+	return &Model{Db: db}
+	/*
+		model := new(Model)
+		model.Db = db
+		return model
+	*/
+}
+
+//func setWhere
+//func setColumn
+//func setLimit
+
+type User struct {
+	Id   int
+	Name string
+}
+
+//return struct{id name}
+func (model *Model) FindOne(id int) User {
 
 	//如果使用"select * from TABLE"
 	//必须枚举全部的列，例如：rows.Scan(&id, &name)
 	//如果使用“select name from TABLE”
 	//只需要 rows.Scan(&name)
-	rows, err := db.Query("SELECT * FROM users WHERE id = ?", id)
+	rows, err := model.Db.Query("SELECT * FROM users WHERE id = ?", id)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	var name string
 	for rows.Next() {
-		var name string
 		if err := rows.Scan(&id, &name); err != nil {
 			log.Fatal(err)
 		}
+		fmt.Println(name)
 	}
-
+	return User{Id: id, Name: name}
 }
